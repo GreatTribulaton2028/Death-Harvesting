@@ -1,0 +1,992 @@
+<html lang="zh-HK"><head>
+<meta charset="UTF-8">
+<title>VITAL THREAT MONITOR // V6.0 - 終版（連結原生正常）</title>
+<link href="https://fonts.googleapis.com/css2?family=Jura:wght@400;600;700&amp;family=Orbitron:wght@500;700;900&amp;family=Share+Tech+Mono&amp;family=Noto+Sans+TC:wght@300;400;700&amp;family=Creepster&amp;display=swap" rel="stylesheet">
+<style>
+    :root {
+        --c-bg: #030405;
+        --c-panel: rgba(12, 18, 24, 0.95);
+        --c-border: #1a2a3a;
+        --c-accent: #00f3ff;
+        --c-fatal: #ff2a2a;
+        --c-crit: #ffae00;
+        --c-acc: #00ff41;
+        --c-dim: #3a4a5a;
+        --f-mono: 'Share Tech Mono', monospace;
+        --f-head: 'Orbitron', sans-serif;
+        --f-text: 'Jura', 'Noto Sans TC', sans-serif;
+    }
+    html, body {
+        margin:0; padding:0; height:100%; overflow:hidden;
+        background:var(--c-bg); color:#e0e6ed; font-family:var(--f-text);
+    }
+    header {
+        height:60px; background:rgba(5,8,10,0.98); border-bottom:1px solid var(--c-accent);
+        display:flex; align-items:center; justify-content:space-between; padding:0 24px;
+        box-shadow:0 0 15px rgba(0,243,255,0.1); z-index:10;
+    }
+    .brand {
+        font-family:var(--f-head); font-size:24px; letter-spacing:2px; color:var(--c-accent);
+        text-shadow:0 0 8px rgba(0,243,255,0.4);
+    }
+    .brand span { color:#fff; font-size:14px; letter-spacing:1px; margin-left:10px; opacity:0.7; }
+    .controls { display:flex; gap:12px; align-items:center; }
+    .btn {
+        background:rgba(0,243,255,0.1); border:1px solid var(--c-accent); color:var(--c-accent);
+        padding:8px 14px; font-family:var(--f-head); cursor:pointer; transition:all 0.2s; font-size:12px;
+    }
+    .btn:hover { background:var(--c-accent); color:#000; box-shadow:0 0 15px var(--c-accent); }
+    #file-input { display:none; }
+    .paste-zone {
+        background:#0a0e12; border-bottom:1px solid var(--c-border); padding:8px 24px;
+        display: flex;          /* 左右 flex 布局 */
+        gap: 24px;              /* 左右間距 */
+        align-items: flex-start;
+    }
+    .paste-left {
+        flex: 1;                /* 左邊佔滿剩餘空間 */
+        min-width: 0;
+    }
+    .paste-area {
+        width: 100%;            /* textarea 佔滿左欄 */
+        height: 120px;
+        background:#111; color:#eee; border:1px solid var(--c-border);
+        font-family:var(--f-mono); font-size:13px; padding:8px; resize:vertical;
+    }
+    main {
+        display:grid; grid-template-columns:320px 1fr 380px; gap:4px; padding:4px;
+        height:calc(100% - 60px - 156px);
+    }
+    .panel {
+        background:var(--c-panel); border:1px solid var(--c-border);
+        display:flex; flex-direction:column; overflow:hidden;
+    }
+    .p-head {
+        background:rgba(0,0,0,0.3); padding:10px 16px; border-bottom:1px solid var(--c-border);
+        font-family:var(--f-mono); font-size:12px; color:var(--c-accent); letter-spacing:1px;
+        text-transform:uppercase; flex-shrink:0;
+    }
+    #log-stream {
+        flex:1 1 auto; overflow-y:scroll !important; min-height:0; max-height:100%;
+        -webkit-overflow-scrolling:touch;
+    }
+    #log-stream::-webkit-scrollbar { width:6px; background:#050505; }
+    #log-stream::-webkit-scrollbar-thumb { background:var(--c-dim); border-radius:3px; }
+    #search-input {
+        margin:8px 12px; padding:8px; background:#111; border:1px solid var(--c-border);
+        color:#fff; font-family:var(--f-mono); width:calc(100% - 24px); font-size:12px;
+    }
+    .log-item {
+        padding:10px 16px; border-bottom:1px solid #151f29; font-size:13px;
+        transition:background 0.2s; border-left:3px solid transparent;
+    }
+    .log-item:hover { background:rgba(255,255,255,0.03); }
+    .log-item .date { color:#5a6a7a; font-size:11px; display:block; margin-bottom:3px; }
+    .log-item .title a { color:#00f3ff; text-decoration:underline; cursor:pointer; }
+    .type-FATAL { border-left-color:var(--c-fatal); }
+    .type-FATAL .title a { color:#ffcece; }
+    .type-CRIT { border-left-color:var(--c-crit); }
+    .type-CRIT .title a { color:#ffeec2; }
+    .type-ACC { border-left-color:var(--c-acc); }
+    .type-ACC .title a { color:#ccffcc; }
+    #center-panel { display:grid; grid-template-rows:minmax(320px,1fr) 260px; }
+    .radar-zone { position:relative; display:flex; align-items:center; justify-content:center; flex-direction:column; min-height:320px; }
+    .big-stat { text-align:center; z-index:2; text-shadow:0 0 20px #000; }
+    .big-stat .val { font-family:var(--f-head); font-size:72px; color:#fff; line-height:1; text-shadow:0 0 30px rgba(0,243,255,0.4); }
+    .big-stat .label { font-family:var(--f-mono); color:var(--c-accent); font-size:14px; letter-spacing:3px; margin-top:10px; }
+    .radar-circle { position:absolute; width:300px; height:300px; border:1px solid rgba(0,243,255,0.1); border-radius:50%; background:radial-gradient(circle, rgba(0,243,255,0.04) 0%, transparent 60%); }
+    .radar-sweep { position:absolute; width:300px; height:300px; background:conic-gradient(from 0deg, transparent 0deg, rgba(0,243,255,0.08) 55deg, transparent 56deg); border-radius:50%; animation:spin 8s infinite linear; }
+    @keyframes spin { 100% { transform:rotate(360deg); } }
+    .chart-container { position:relative; padding:20px 20px 10px 45px; border-top:1px solid var(--c-border); background:linear-gradient(180deg, rgba(0,0,0,0.3), transparent); display:flex; flex-direction:column; justify-content:flex-end; }
+    .chart-bars { display:flex; align-items:flex-end; height:100%; gap:2px; position:relative; z-index:2; overflow-x:auto; }
+    .bar { flex:1; background:var(--c-dim); opacity:0.5; min-width:3px; transition:height 0.3s; }
+    .bar.spike { background:var(--c-fatal); box-shadow:0 0 10px var(--c-fatal); opacity:0.9; }
+    .chart-overlay { position:absolute; top:20px; left:45px; right:20px; bottom:10px; pointer-events:none; z-index:3; width:calc(100% - 65px); height:calc(100% - 30px); }
+    polyline { fill:none; stroke:#fff; stroke-width:2; vector-effect:non-scaling-stroke; filter:drop-shadow(0 0 3px #fff); }
+    .y-axis { position:absolute; left:0; top:20px; bottom:10px; width:40px; display:flex; flex-direction:column; justify-content:space-between; font-family:var(--f-mono); font-size:10px; color:#666; text-align:right; padding-right:8px; }
+    #stats-container { overflow-y:auto; flex:1; padding:12px; }
+
+/* === Classification stats (COMPACT VERSION) === */
+/* ===== CATEGORY DISTRIBUTION (FINAL) ===== */
+
+.stat-row{
+    padding:18px 24px;
+    border-bottom:1px solid rgba(255,255,255,0.06);
+}
+
+.stat-cat{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    margin-bottom:10px;
+}
+
+.cat-name{
+    font-size:15px;
+    font-weight:700;
+    color:#e5e5e5;
+    font-family:var(--f-head);
+    letter-spacing:0.8px;
+}
+
+.cat-val{
+    font-family:var(--f-mono);
+    font-size:22px;
+    color:#ffffff;
+    line-height:1;
+}
+
+/* progress bar track */
+.progress-track{
+    background:#0e0e0e;
+    height:8px;
+    width:100%;
+    border-radius:4px;
+    overflow:hidden;
+    margin-bottom:6px;
+}
+
+/* progress bar fill (CORE FIX) */
+.progress-fill{
+    height:100%;
+    transition: width .45s linear;
+    will-change: width;
+}
+
+/* category colors */
+.fill-fatal{
+    background:var(--c-fatal);
+    box-shadow:0 0 8px rgba(255,60,60,.55);
+}
+
+.fill-crit{
+    background:var(--c-crit);
+}
+
+.fill-acc{
+    background:var(--c-acc);
+}
+
+.fill-other{
+    background:var(--c-dim);
+}
+
+/* description text */
+.desc{
+    font-size:12px;
+    color:#7a8a9a;
+    line-height:1.4;
+}
+
+
+    /* 倒數計時 - 右欄 */
+    #doomsday-countdown {
+        flex: 0 0 280px; /* 固定寬度 280px，永遠靠右 */
+        padding: 12px 16px;
+        background: linear-gradient(135deg, rgba(10, 0, 5, 0.96), rgba(20, 0, 10, 0.92));
+        border: 2px dashed #ff0a2a;
+        border-radius: 4px;
+        box-shadow: 0 0 35px rgba(255, 10, 42, 0.5), inset 0 0 20px rgba(180, 0, 30, 0.35);
+        color: #ffcccc;
+        text-align: center;
+        clip-path: polygon(8% 0%, 92% 0%, 100% 12%, 100% 88%, 92% 100%, 8% 100%, 0% 88%, 0% 12%);
+        overflow: hidden;
+        animation: doom-flicker 12s infinite alternate;
+        align-self: flex-start; /* 頂部對齊 */
+    }
+    #doomsday-countdown:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0 60px rgba(255, 30, 60, 0.7);
+    }
+    .countdown-title {
+        font-family: 'Creepster', cursive;
+        font-size: 1.45rem;
+        letter-spacing: 3px;
+        color: #ff0a2a;
+        text-shadow: 0 0 16px #800000, 0 0 30px #400000;
+        margin-bottom: 6px;
+        animation: faint-glitch 9s infinite;
+    }
+    .countdown-digit {
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 2.2rem;
+        font-weight: bold;
+        letter-spacing: 5px;
+        color: #00ffaa;
+        text-shadow: 0 0 20px #009966, 0 0 35px #006644;
+        margin: 6px 0;
+        animation: digit-pulse 4s infinite alternate;
+    }
+    .countdown-target {
+        font-size: 0.9rem;
+        color: #dd4444;
+        letter-spacing: 1.5px;
+        margin-top: 4px;
+    }
+    /* 緊急模式 */
+    .countdown-urgent .countdown-digit {
+        color: #ff3344;
+        animation: urgent-digit 1s infinite alternate;
+        text-shadow: 0 0 25px #ff3344, 0 0 40px #800000;
+    }
+    @keyframes doom-flicker {
+        0% { opacity: 0.93; box-shadow: 0 0 35px rgba(255,26,51,0.45); }
+        100% { opacity: 0.99; box-shadow: 0 0 50px rgba(255,26,51,0.6); }
+    }
+    @keyframes faint-glitch {
+        0%, 100% { transform: translate(0); }
+        3%, 5% { transform: translate(1.2px, -1.2px); }
+        7% { transform: translate(-1px, 1px); }
+    }
+    @keyframes digit-pulse {
+        0% { transform: scale(1); opacity: 0.95; }
+        100% { transform: scale(1.04); opacity: 1; }
+    }
+    @keyframes urgent-digit {
+        0% { opacity: 0.85; transform: scale(1); }
+        100% { opacity: 1; transform: scale(1.06); }
+    }
+    /* 手機版：上下排列 */
+    @media (max-width: 300px) {
+        .paste-zone {
+            flex-direction: column;
+            gap: 15px;
+        }
+        #doomsday-countdown {
+            width: 100%;
+        }
+    }
+    /* 右下角七災年 */
+    #tribulation-overlay {
+        position: fixed;
+        bottom: 40px;
+        right: 20px;
+        width: 320px;
+        padding: 14px 18px;
+        background: rgba(6, 0, 3, 0.94);
+        border: 1px solid rgba(200, 20, 40, 0.55);
+        box-shadow: 0 0 28px rgba(220, 30, 60, 0.28), inset 0 0 18px rgba(0, 0, 0, 0.85), inset 0 0 12px rgba(180, 0, 0, 0.15);
+        color: #e06666;
+        text-align: center;
+        z-index: 9999;
+        clip-path: polygon(6% 0%, 94% 0%, 100% 10%, 100% 90%, 94% 100%, 6% 100%, 0% 90%, 0% 10%);
+        overflow: hidden;
+        transition: all 0.5s ease;
+        animation: subtle-glow 15s infinite alternate;
+    }
+    #tribulation-overlay:hover {
+        border-color: #ff3355;
+        box-shadow: 0 0 45px rgba(255, 51, 85, 0.5);
+        transform: translateY(-4px) scale(1.02);
+    }
+    .trib-title {
+        font-family: 'Creepster', cursive;
+        font-size: 2.1rem;
+        letter-spacing: 4px;
+        color: #ff1a33;
+        text-shadow: 0 0 10px #800000, 0 0 20px #400000, 2px 2px 4px #000;
+        margin-bottom: 6px;
+        animation: faint-glitch 10s infinite;
+    }
+    .trib-subtitle {
+        font-size: 1.05rem;
+        color: #dd7777;
+        margin: 5px 0 3px;
+        font-family: 'Share Tech Mono', monospace;
+        letter-spacing: 1px;
+    }
+    .trib-years {
+        font-size: 0.95rem;
+        color: #bb5555;
+        margin: 4px 0;
+    }
+    .trib-link {
+        display: block;
+        margin: 10px auto 6px;
+        color: #00dd99;
+        font-size: 0.9rem;
+        text-decoration: none;
+        letter-spacing: 1.5px;
+        text-shadow: 0 0 8px #009966;
+        transition: all 0.4s;
+    }
+    .trib-link:hover {
+        color: #00ffbb;
+        text-shadow: 0 0 15px #00ffbb;
+        transform: scale(1.05);
+    }
+    .trib-verse {
+        font-size: 0.88rem;
+        color: #ff9999;
+        line-height: 1.4;
+        margin-top: 8px;
+        font-family: 'Share Tech Mono', monospace;
+        text-shadow: 0 0 6px rgba(255, 51, 85, 0.4);
+        letter-spacing: 0.5px;
+    }
+    .verse-emph {
+        color: #ff3344;
+        font-weight: bold;
+        text-shadow: 0 0 10px #ff3344;
+        animation: pulse-emph 4s infinite alternate;
+    }
+    @keyframes subtle-glow {
+        0% { opacity: 0.93; box-shadow: 0 0 28px rgba(220,30,60,0.28); }
+        100% { opacity: 0.98; box-shadow: 0 0 38px rgba(220,30,60,0.38); }
+    }
+    @keyframes faint-glitch {
+        0%, 100% { transform: translate(0); }
+        3%, 5% { transform: translate(1.2px, -1.2px); }
+        7% { transform: translate(-1px, 1px); }
+    }
+    @keyframes pulse-emph {
+        0% { text-shadow: 0 0 6px #ff3344; }
+        100% { text-shadow: 0 0 14px #ff3344, 0 0 20px #800000; }
+    }
+    @media (max-width: 900px) {
+        #tribulation-overlay {
+            width: 180px;
+            padding: 10px 12px;
+            bottom: 15px;
+            right: 15px;
+            font-size: 0.9rem;
+        }
+        .trib-title { font-size: 1.8rem; }
+    }
+    /* 最下方跑馬燈 footer */
+    #doom-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 36px;
+        background: linear-gradient(to right, #180000, #300000);
+        border-top: 2px solid #ff1122;
+        box-shadow: 0 -6px 25px rgba(255, 17, 34, 0.35);
+        z-index: 9996;
+        overflow: hidden;
+        line-height: 36px;
+        text-align: center;
+        color: #ff9999;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 14px;
+        letter-spacing: 2px;
+        text-shadow: 0 0 8px #ff0033, 0 0 15px #800000;
+        animation: footer-glow 10s infinite alternate;
+    }
+    #footer-text {
+        display: inline-block;
+        white-space: nowrap;
+        padding-left: 100%;
+        animation: marquee-slow 150s linear infinite;
+    }
+    #doom-footer:hover #footer-text {
+        animation-play-state: paused;
+    }
+    @keyframes marquee-slow {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(-100%); }
+    }
+    @keyframes footer-glow {
+        0% { box-shadow: 0 -6px 25px rgba(255,17,34,0.35); }
+        100% { box-shadow: 0 -6px 40px rgba(255,51,68,0.55); }
+    }
+    @media (max-width: 768px) {
+        #doom-footer {
+            height: 48px;
+            line-height: 1.4;
+            padding: 4px 0;
+            font-size: 13px;
+            letter-spacing: 1.5px;
+        }
+        #footer-text {
+            white-space: normal;
+            padding-left: 0;
+            animation: none;
+            display: block;
+            text-align: center;
+        }
+    }
+
+/* ===== Category chart mode (底部類別柱狀圖) ===== */
+.chart-bars.category-mode{
+    overflow-x: hidden !important;
+    gap: 14px;
+    padding: 0 10px;
+    align-items: flex-end;
+}
+
+.chart-bars.category-mode .cat-col{
+    flex: 0 0 72px;            /* 每條柱固定闊度，清楚分開 */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.chart-bars.category-mode .cat-col .bar{
+    width: 100%;
+    min-width: 0;              /* 覆蓋原本 min-width:3px */
+    opacity: 0.9;
+    border-radius: 3px 3px 0 0;
+}
+
+.chart-bars.category-mode .cat-label{
+    margin-top: 6px;
+    text-align: center;
+    line-height: 1.15;
+    font-size: 11px;
+    font-family: var(--f-mono);
+    color: #9ab;
+    letter-spacing: 0.6px;
+    user-select: none;
+}
+
+.chart-bars.category-mode .cat-label b{
+    color: #e0e6ed;
+    font-weight: 700;
+}
+
+/* ================= FIXES (2026-01-26) ================= */
+
+/* ① 預留空間，避免右欄被「七災年」fixed overlay 蓋住 */
+.panel:last-child{
+    padding-bottom: max(360px, 40vh);
+}
+
+/* ② 確保底部 CATEGORY DISTRIBUTION 有實際高度 */
+.chart-container{
+    position: relative;
+}
+
+.chart-bars{
+    flex: 1 1 auto;
+    min-height: 140px;
+}
+
+
+</style>
+</head>
+<body>
+<div class="paste-zone">
+    <div class="paste-left">
+        <textarea id="paste-input" class="paste-area" placeholder="把你的資料全部貼在這裡（支援亂碼、空格、tab分隔）
+載入後會自動整理日期並顯示"></textarea>
+        <div style="margin-top:8px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <button class="btn" onclick="loadPastedData()">載入貼上內容</button>
+            <button class="btn" onclick="document.getElementById('file-input').click()">選擇檔案</button>
+            <button class="btn" onclick="exportSnapshot()">匯出成單一 HTML</button>
+            <input type="file" id="file-input" accept=".txt,.tsv" style="display:none;" onchange="handleFile(event)">
+            <span style="color:#888; font-size:13px;">提示：標題可點擊跳新聞，匯出後也正常</span>
+        </div>
+    </div>
+
+    <!-- 倒數計時 - 右欄 -->
+    <div id="doomsday-countdown">
+        <div class="countdown-title">猜想末次號筒的倒數</div>
+        <div id="countdown-timer" class="countdown-digit">612d 07h 54m</div>
+        <div class="countdown-target">UNTIL 2027-10-01</div>
+    </div>
+</div>
+
+<header>
+    <div class="brand">THREAT MONITOR <span> 生死記錄儀 || (2019 COVID - 2028 End-time?)</span></div>
+    <div class="controls">
+        <div id="period-display" style="color:var(--c-crit); font-family:var(--f-mono); padding:6px 16px; border:1px solid var(--c-crit); background:rgba(255,174,0,0.05);">2026-01-26 → 2026-01-26</div>
+    </div>
+</header>
+
+<main>
+    <div class="panel">
+        <div class="p-head"><span>INCOMING FEED</span><span>事件流</span></div>
+        <input id="search-input" type="text" placeholder="搜尋 / Search (e.g. 猝死, 暈倒)">
+        <div id="log-stream"><div class="log-item type-ACC has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.hkcd.com.hk/hkcdweb/content/2026/01/26/content_8737145.html" target="_blank">八鄉致命交通意外 釀一死兩傷</a></span></div><div class="log-item type-FATAL has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://news.tvb.com/tc/local/6976dbdb82dea93ecb7b87b8/港澳-大埔六旬漢騎單車遭私家車撞斃-司機涉危險駕駛被捕" target="_blank">大埔六旬漢騎單車遭私家車撞斃 司機涉危險駕駛被捕</a></span></div><div class="log-item type-FATAL has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.wenweipo.com/a/202601/26/AP69767d27e4b04d7d56d03ba4.html" target="_blank">的士攔腰挨撞一不治警揭花槽藏刀棍拘兩人- 香港 - 香港文匯網</a></span></div><div class="log-item type-FATAL has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://news.mingpao.com/ins/港聞/article/20260126/s00001/1769394277863/單車男於大埔汀角路遭私家車撞斃" target="_blank">單車男於大埔汀角路遭私家車撞斃 (10:30) - 20260126 - 港聞</a></span></div><div class="log-item type-FATAL has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://tw.news.yahoo.com/與運將口角遭丟包-新北男醉臥內車道-遭4車輾斃慘死-062100055.html" target="_blank">與運將口角遭丟包！新北男醉臥內車道 遭4車輾斃慘死</a></span></div><div class="log-item type-ACC has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://hkcd.com/hkcdweb/content/2026/01/25/content_8737027.html" target="_blank">錦田交通意外釀1死2傷 私家車司機及女乘客被捕</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.facebook.com/ETtoday/posts/北市知名酒吧外驚傳命案35歲陸軍少校墜樓亡自殺防治1925生命線1995/1334908975334851/" target="_blank">35歲陸軍少校墜樓亡 ●自殺防治1925生命線1995</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://hk.on.cc/hk/bkn/cnt/news/20260126/bkn-20260126031155712-0126_00822_001_cn.html?refer=hn2" target="_blank">土瓜湾12岁男童家中上吊母亲发现惜太迟｜即时新闻｜中港台｜on.cc东网</a></span></div><div class="log-item type-CRIT has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://hk.on.cc/hk/bkn/cnt/news/20260125/bkn-20260125151428221-0125_00822_001.html" target="_blank">大埔男子危站期間墮樓 昏迷送院救治</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://hk.on.cc/hk/bkn/cnt/news/20260125/mobile/bkn-20260125151428221-0125_00822_001_cn.html" target="_blank">大埔情困男危站期间堕楼清醒送院治疗｜即时新闻｜中港台｜on.cc东网</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://hk.on.cc/hk/bkn/cnt/news/20260125/bkn-20260125195502062-0125_00822_001_cn.html" target="_blank">屯门六旬妇自缢轻生儿发现救下送院治理｜即时新闻｜中港台｜on.cc东网</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://tw.news.yahoo.com/快訊-年前憾事-桃園57歲婦-穿紅衣-豪宅墜樓慘死-012000296.html" target="_blank">快訊／年前憾事！桃園57歲婦「穿紅衣」豪宅墜樓慘死 路人嚇壞報案</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.msn.com/zh-tw/news/national/快訊-新北女返家聞瓦斯味-警破門1男上吊/ar-AA1S0kR9?cvid=69388fb6c6c741dc920bf8079a015a83&amp;apiversion=v2&amp;domshim=1&amp;noservercache=1&amp;noservertelemetry=1&amp;batchservertelemetry=1&amp;renderwebcomponents=1&amp;wcseo=1" target="_blank">快訊／新北女返家聞瓦斯味 警破門1 男上吊</a></span></div><div class="log-item type-FATAL has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.ohpama.com/1002149/生活熱話/生活熱話/珍惜生命-土瓜灣-12歲-男童-自縊/" target="_blank">珍惜生命｜ 土瓜灣12歲男童寓所內自縊母親揭發惜送院不治| 生活熱話</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.ohpama.com/1002158/生活熱話/生活熱話/珍惜生命-黃大仙-龍和樓-15歲-少年-墮樓/" target="_blank">珍惜生命｜ 黃大仙下邨龍和樓15歲少年墮樓亡| 生活熱話</a></span></div><div class="log-item type-FATAL has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://hk.on.cc/hk/bkn/cnt/news/20260125/bkn-20260125185334867-0125_00822_001.html" target="_blank">黃大仙下邨15歲少年墮樓 當場傷重不治</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.wenweipo.com/s/202601/24/AP69746f13e4b04d7d56d001a9.html" target="_blank">嗜賭欠債男子燒炭亡女友返家揭發- 香港 - 香港文匯網</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://tw.news.yahoo.com/新-桃園藝文特區-紅衣女墜樓-慘死-家人睡夢中不知情-030800813.html" target="_blank">新／桃園藝文特區「紅衣女墜樓」慘死 家人睡夢中不知情</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://tw.news.yahoo.com/新-陸軍少校疑遭霸凌輕生亡-生前自曝這舉動成-最後-根稻草-035000867.html" target="_blank">新／陸軍少校疑遭霸凌輕生亡 生前自曝這舉動成「最後一根稻草」</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.nownews.com/news/6779882" target="_blank">新北汐止社區墜樓！深夜突傳巨響 驚見女住戶「25F猛墜地慘死」</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.am730.com.hk/國際/1006195/印尼土石流增至10死-搜救行動重啟" target="_blank">印尼土石流增至10死 搜救行動重啟</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.i-cable.com/新聞資訊/432558/美國寒流吹襲廣泛地區-多人失溫亡-華盛頓及23州" target="_blank">美國寒流吹襲廣泛地區 多人失溫亡 華盛頓及23州進入緊急狀態</a></span></div><div class="log-item type-FATAL has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.dotdotnews.com/a/202601/26/AP6976e29be4b0c32d4f67077f.html" target="_blank">（有片）墨西哥一球場發生襲擊事件11人死亡- 國際</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.epochtimes.com/b5/26/1/26/n14684125.htm/amp" target="_blank">一名航港局警察槍殺親人後自盡</a></span></div><div class="log-item type-FATAL has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://tw.news.yahoo.com/女模離奇猝死-男友錄嘴塞襪-窗簾綑綁影片-鏡新聞-052049976.html" target="_blank">女模離奇猝死！ 男友錄嘴塞襪、窗簾綑綁影片｜#鏡新聞</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="http://www.msn.com/zh-tw/news/other/北市租屋處離奇命案-26歲女遭-窗簾綑綁-口吐白沫亡-男友送辦/ar-AA1UVrRx?apiversion=v2&amp;domshim=1&amp;noservercache=1&amp;noservertelemetry=1&amp;batchservertelemetry=1&amp;renderwebcomponents=1&amp;wcseo=1" target="_blank">北市租屋處離奇命案! 26歲女遭「窗簾綑綁」 口吐白沫亡男友送辦</a></span></div><div class="log-item type-CRIT has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://tw.news.yahoo.com/台北女模-窗簾綁手-襪塞嘴亡-傳昏迷時男友在旁拍片-044241935.html" target="_blank">台北女模「窗簾綁手、襪塞嘴亡」 傳昏迷時男友在旁拍片</a></span></div><div class="log-item type-FATAL has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://tw.news.yahoo.com/男下狠手-割斷女友舌頭-後勒斃-血腥肉塊照曝光-100442476.html" target="_blank">男下狠手「割斷女友舌頭」後勒斃！血腥肉塊照曝光</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://hk.on.cc/cnt/news/20260125/bkn-20260125173016676-0125_00822_001.html" target="_blank">旺角鳳姐遭刀匪叉頸打劫 損失1400元現金</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.wenweipo.com/a/202601/26/AP6976e3cfe4b04d7d56d04a41.html" target="_blank">墨西哥一足球場發生槍擊事件已致11死12傷 - 國際 - 香港文匯網</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://tw.news.yahoo.com/45歲-好聲-family-奪冠女歌手癌逝-夫揭比賽時癌擴散全身-000000491.html" target="_blank">45歲《好聲 Family》奪冠女歌手癌逝！夫揭比賽時癌擴散全身 醫：別誤為痔瘡</a></span></div><div class="log-item type-CRIT has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://stars.udn.com/star/amp/story/10091/9288775" target="_blank">84歲母親加護病房搶救2周離世胡婉玲悲痛證實| 電視</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://star.ettoday.net/amp/amp_news.php7?news_id=3107711" target="_blank">女模柯柯29歲癌逝「生前3大遺願」曝光！　歡迎賓客告別式唱歌跳舞</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://news.china.com/socialgd/10000169/20260126/49196572.html" target="_blank">中国工程院院士孙燕逝世 肿瘤内科学奠基人辞世</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://cj.sina.cn/articles/view/5044281310/12ca99fde02002h3fc?vt=4" target="_blank">中国关工委原常务副主任闵振环逝世，享年94岁</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://mtgamer.com/全球資訊/加沙的帳篷生活在疾病和日常絕望之間/258924/" target="_blank">加沙的帳篷生活在疾病和日常絕望之間</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.msn.com/zh-tw/news/living/台中女童猝逝驗出b19病毒-衛生局-疾管署回應說明/ar-AA1UyMIG?apiversion=v2&amp;domshim=1&amp;noservercache=1&amp;noservertelemetry=1&amp;batchservertelemetry=1&amp;renderwebcomponents=1&amp;wcseo=1" target="_blank">台中女童猝逝驗出B19病毒 衛生局、 疾管署回應說明</a></span></div><div class="log-item type-FATAL has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://news.tvb.com/tc/world/6976d27e82dea93ecb7b442b/%E5%9C%8B%E9%9A%9B-%E5%B0%BC%E5%B8%95%E7%97%85%E6%AF%92%EF%BD%9C%E5%8D%B0%E5%BA%A6%E7%8F%BE%E6%84%9F%E6%9F%93%E7%BE%A4%E7%B5%84-%E7%84%A1%E7%96%AB%E8%8B%97%E5%8F%AF%E4%BA%BA%E5%82%B3%E4%BA%BA%E6%AD%BB%E4%BA%A1%E7%8E%87%E9%AB%98%E9%81%9475%EF%BD%9C%E5%8D%B3%E7%9D%87%E5%A6%82%E4%BD%95%E9%81%BF%E5%85%8D%E7%97%85%E5%BE%9E%E5%8F%A3%E5%85%A5" target="_blank">尼帕病毒｜印度現感染群組 無疫苗可人傳人死亡率高達75%｜即睇如何避免病從口入</a></span></div><div class="log-item type-FATAL has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.tkww.hk/a/202601/26/AP6976e910e4b0aa6cbcd3bc33.html" target="_blank">印度出現尼帕病毒疫情 感染者死亡率達40%以上</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.msn.com/zh-tw/news/living/快訊-鑽石公主號船長-船上病逝-副手接手開進基隆港/ar-AA1F2w1K?cvid=02C0692A76E245848473DC0CAA22BFB5&amp;ocid=hpmsn&amp;apiversion=v2&amp;domshim=1&amp;noservercache=1&amp;noservertelemetry=1&amp;batchservertelemetry=1&amp;renderwebcomponents=1&amp;wcseo=1" target="_blank">快訊／鑽石公主號船長「船上病逝！」 副手接手開進基隆港</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://life.mingpao.com/general/article?issue=20260126&amp;nodeid=1769364888148" target="_blank">李在明「政治導師」 韓前總理李海瓚猝逝- 20260126 - 公民</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="http://www.sinopecnews.com.cn/xnews/content/2026-01/26/content_7141436.html" target="_blank">闵振环同志逝世</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="http://www.msn.com/zh-tw/entertainment/news/金唱片返韓後-爸爸突離世-tws志薰確定缺席高雄巡演/ar-AA1UJ2Uf?apiversion=v2&amp;domshim=1&amp;noservercache=1&amp;noservertelemetry=1&amp;batchservertelemetry=1&amp;renderwebcomponents=1&amp;wcseo=1" target="_blank">金唱片返韓後「爸爸突離世」! TWS 志薰確定缺席高雄巡演</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.worldjournal.com/wj/amp/story/121240/9288361" target="_blank">長期糖尿病患者需警惕紅細胞變化損害血管| 養生保健| 健康 | 世界新聞網</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://tw.news.yahoo.com/胡婉玲84歲母病逝-深夜慟曝噩耗-愛貓離世前喊-不久會來陪你-000924597.html" target="_blank">胡婉玲84歲母病逝！深夜慟曝噩耗 愛貓離世前喊：不久會來陪你</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://tw.news.yahoo.com/面對高度-沉默-的腎臟疾病-醫建議定期規劃檢查-010000605.html" target="_blank">面對高度「沉默」的腎臟疾病 醫建議定期規劃檢查</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://tw.news.yahoo.com/消滅-天花-功臣-威廉福奇醫師89歲逝世-013403140.html" target="_blank">消滅「天花」功臣 威廉福奇醫師89歲逝世</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://finance.sina.com.cn/tech/roll/2026-01-26/doc-inhircnv9336286.shtml" target="_blank">痛别！孙燕院士逝世</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.msn.com/zh-tw/entertainment/news/等不到肝臟移植病逝-海俊傑悲痛悼念妻-走得平靜-親友皆陪伴在側/ar-AA1Rs8HI?cvid=692d374c384e44e385f5ab29b3d2da4f" target="_blank">等不到肝臟移植病逝！海俊傑悲痛悼念妻： 走得平靜親友皆陪伴在側</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://news.qq.com/rain/a/20260126A0279Q00" target="_blank">著名历史学家、中南财经政法大学原教授袁继成逝世</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.taisounds.com/news/content/107/238180" target="_blank">辣模柯柯30歲病逝…家屬慟發訃聞遺願也曝光| 影視</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.ettoday.net/news/20260126/3107563.htm" target="_blank">奮戰血癌3年病逝！26歲女網紅「最後身影曝光」　夫淚崩證實</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://tw.news.yahoo.com/獨-大哥猝逝-吳永吉再爆母親去年已離世-092859877.html" target="_blank">獨》大哥猝逝！吳永吉再爆母親去年已離世</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.msn.com/zh-tw/entertainment/news/獨家-李又汝子宮長肌瘤又多囊性卵巢向神求子見證奇蹟-驗孕2次才信/ar-AA1UEtax?apiversion=v2&amp;domshim=1&amp;noservercache=1&amp;noservertelemetry=1&amp;batchservertelemetry=1&amp;renderwebcomponents=1&amp;wcseo=1" target="_blank">獨家／李又汝子宮長肌瘤又多囊性卵巢!向神求子見證奇蹟 驗孕2 次才信</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="http://www.msn.com/zh-tw/entertainment/news/蕭敬騰岳父逝世-他向愛妻吐-一句話-暖爆-summer-喊話父親放心/ar-AA1StQjJ?cvid=6944e37bc60b4eafb202af4066615fe6&amp;ocid=wispr&amp;apiversion=v2&amp;domshim=1&amp;noservercache=1&amp;noservertelemetry=1&amp;batchservertelemetry=1&amp;renderwebcomponents=1&amp;wcseo=1" target="_blank">蕭敬騰岳父逝世! 他向愛妻吐「一句話」暖爆 Summer 喊話父親放心</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://hk.on.cc/hk/bkn/cnt/intnews/20260126/bkn-20260126080022444-0126_00992_001.html" target="_blank">韓前總理李海瓚越南病逝 享年73歲</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.msn.com/zh-tw/news/other/證交所前總經理朱富春逝世-享壽77歲/ar-AA1UHYh1?apiversion=v2&amp;domshim=1&amp;noservercache=1&amp;noservertelemetry=1&amp;batchservertelemetry=1&amp;renderwebcomponents=1&amp;wcseo=1" target="_blank">證交所前總經理朱富春逝世 享壽77歲</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.singtao.ca/7398899/2026-01-25/news-30歲女吃自助餐後腹痛離世 體內三酸甘油脂揭超標26倍 醫生揭致命關鍵/" target="_blank">30歲女吃自助餐後腹痛離世 體內三酸甘油脂揭超標26倍 醫生揭致命關鍵</a></span></div><div class="log-item type-FATAL has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://news.tvb.com/tc/local/6975e58982dea93ecb73c8a9/港澳-40歲男子港島徑行山時不適暈倒送院搶救後不治" target="_blank">40歲男子港島徑行山時不適暈倒 送院搶救後不治</a></span></div><div class="log-item type-FATAL has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.msn.com/zh-tw/news/national/uber女司機新店載客剛到社區-昏倒猝死-警衛嚇壞急報案/ar-AA1UHHlC" target="_blank">Uber女司機新店載客!剛到社區「昏倒猝死」 警衛嚇壞急報案</a></span></div><div class="log-item type-FATAL has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.dotdotnews.com/a/202601/25/AP6975d764e4b0c32d4f66f9c4.html" target="_blank">大圍文禮路教會男子廁內暈倒昏迷送院惜不治- 港聞</a></span></div><div class="log-item type-FATAL has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.singtao.ca/7398713/2026-01-25/news-港島徑行山漢疑與人爭執後暈倒 gfs送院搶救後不治/?variant=zh-hk" target="_blank">中年漢帶子女行港島徑暈倒 送院搶救後不治</a></span></div><div class="log-item type-FATAL has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.hk01.com/大國小事/60316036/內地6旬漢跟團遊北京猝死-旅行社曾連續兩日凌晨集合-判賠35萬" target="_blank">內地6旬漢跟團遊北京猝死 旅行社曾連續兩日凌晨集合 判賠35萬</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="http://www.msn.com/zh-tw/news/other/名醫辦公室猝逝-專家示警惡性心律不整-30秒內失去意識/ar-AA1IXUYj?cvid=25EC4BCEA6074405A7C65060DAA57142&amp;ocid=onepro&amp;apiversion=v2&amp;domshim=1&amp;noservercache=1&amp;noservertelemetry=1&amp;batchservertelemetry=1&amp;renderwebcomponents=1&amp;wcseo=1" target="_blank">名醫辦公室猝逝 專家示警惡性心律不整「30秒內失去意識」</a></span></div><div class="log-item type-FATAL has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.facebook.com/am730hk/photos/死因有待驗屍後確定-大圍-猝死-教會-am730/1369557681878497/" target="_blank">死因有待驗屍後確定 #大圍 #猝死 #教會 #am730</a></span></div><div class="log-item type-FATAL has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.wenweipo.com/a/202601/25/AP6975d7d9e4b04d7d56d02d1e.html" target="_blank">壯漢攜子女港島徑遠足暈倒昏迷直升機送院不治- 香港 - 香港文匯網</a></span></div><div class="log-item type-FATAL has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://news.now.com/mobile/editorsChoice/player?newsId=634258" target="_blank">男子港島徑行山暈倒昏迷 直升機送院後不治</a></span></div><div class="log-item type-CRIT has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.wenweipo.com/a/202601/25/AP6975bef8e4b04d7d56d02983.html" target="_blank">男子黃大仙踢波昏迷送院救治救回一命- 香港 - 香港文匯網</a></span></div><div class="log-item type-FATAL has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.wenweipo.com/a/202601/26/AP69767d15e4b04d7d56d03ba3.html" target="_blank">食環署督察猝死疑曾胸痛未求醫- 香港 - 香港文匯網</a></span></div><div class="log-item type-FATAL has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://news.rthk.hk/rthk/ch/component/k2/1841290-20260125.htm" target="_blank">港島徑有行山人士暈倒 送院後不治</a></span></div><div class="log-item type-FATAL has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.msn.com/zh-tw/entertainment/news/熬夜到要吞救心丸-林允片場作息曝光-網怒轟-會猝死吧/ar-AA1UVaYV" target="_blank">熬夜到要吞救心丸! 林允片場作息曝光 網怒轟： 會猝死吧</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.msn.com/zh-tw/news/other/日82歲翁-喉嚨痛-確診新冠亡-竟是喉嚨卡12cm鑰匙-x光照曝/ar-AA1IooJF?apiversion=v2&amp;noservercache=1&amp;domshim=1&amp;renderwebcomponents=1&amp;wcseo=1&amp;batchservertelemetry=1&amp;noservertelemetry=1" target="_blank">日82歲翁「喉嚨痛」確診新冠亡！竟是喉嚨卡12cm鑰匙 X 光照曝</a></span></div><div class="log-item type-FATAL has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://news.ttv.com.tw/news/11501250003800W" target="_blank">台東漁船遇浪襲翻覆 船主2小時尋獲送醫不治</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://finance.sina.com.cn/roll/2026-01-25/doc-inhiprmp9922672.shtml" target="_blank">四川威远：轿车坠河三人被困 民警与消防员火速驰援化险情</a></span></div><div class="log-item type-FATAL has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.stheadline.com/realtime-world/3538922/死亡旋風美軍直升機著陸-日本女教師遭吹倒不治" target="_blank">死亡旋風︱美軍直升機著陸 日本女教師遭吹倒不治</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.hk01.com/熱爆話題/60316115/男童將密碼鎖套鼻-竟卡死慘變-牛魔王-消防員靈魂拷問引爆笑" target="_blank">男童將密碼鎖套鼻 竟卡死慘變「牛魔王」 消防員靈魂拷問引爆笑</a></span></div><div class="log-item type-FATAL has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://std.stheadline.com/realtime-world/3538922/美軍直升機著陸-日本教師遭旋風吹倒死亡" target="_blank">美軍直升機著陸 日本教師遭旋風吹倒死亡</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.singtao.ca/7399460/2026-01-25/news-粉嶺男工遭機器截斷手指 清醒送院/" target="_blank">粉嶺男工遭機器截斷手指 清醒送院</a></span></div><div class="log-item type-FATAL has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.knews.com.tw/news/005795A081954107FCD16DA49CC4ADCB" target="_blank">驚悚！運將高架橋趕醉客下車 他躺路中央遭4車輾斃</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.dotdotnews.com/a/202601/26/AP6976b1f5e4b0c32d4f67035b.html" target="_blank">（有片）菲律賓載逾350人渡輪沉沒 至少15死43失蹤</a></span></div><div class="log-item type-OTHER has-link"><span class="date">2026-01-26</span><span class="title"><a href="https://www.i-cable.com/新聞資訊/432470/菲律賓南部載逾三百人渡輪沉沒-至少13死-多人失" target="_blank">菲律賓南部載逾三百人渡輪沉沒 至少13死、多人失蹤</a></span></div></div>
+    </div>
+    <div class="panel" id="center-panel">
+        <div class="radar-zone">
+            <div class="radar-circle"></div>
+            <div class="radar-sweep"></div>
+            <div class="big-stat">
+                <div class="val" id="total-count">81</div>
+                <div class="label">TOTAL INCIDENTS / 總個案數</div>
+            </div>
+        </div>
+        <div class="chart-container">
+            <div style="position:absolute;top:5px;left:45px;font-size:10px;color:#666;font-family:var(--f-mono);">
+                CATEGORY DISTRIBUTION (類別分布：百分比)
+            </div>
+            <div class="y-axis"><span>100%</span><span>50%</span><span>0</span></div>
+            <svg class="chart-overlay" preserveAspectRatio="none">
+                <polyline id="trend-line" points=""></polyline>
+            </svg>
+            <div class="chart-bars category-mode" id="bar-container"><div class="cat-col"><div class="bar" style="background: var(--c-fatal); height: 53.0612%;" title="FATAL: 26 (32.1%)"></div><div class="cat-label"><b>FATAL</b><br>26 / 32.1%</div></div><div class="cat-col"><div class="bar" style="background: var(--c-crit); height: 8.16327%;" title="CRITICAL: 4 (4.9%)"></div><div class="cat-label"><b>CRITICAL</b><br>4 / 4.9%</div></div><div class="cat-col"><div class="bar" style="background: var(--c-acc); height: 4.08163%;" title="ACCIDENT: 2 (2.5%)"></div><div class="cat-label"><b>ACCIDENT</b><br>2 / 2.5%</div></div><div class="cat-col"><div class="bar" style="background: var(--c-dim); height: 100%;" title="OTHER: 49 (60.5%)"></div><div class="cat-label"><b>OTHER</b><br>49 / 60.5%</div></div></div>
+        </div>
+    </div>
+    <div class="panel">
+        <div class="p-head"><span>CLASSIFICATION</span><span>分類統計</span></div>
+        <div id="stats-container">
+        <div class="stat-row">
+            <div class="stat-cat">
+                <div class="cat-name">猝死 Sudden Death</div>
+                <div class="cat-val">26</div>
+            </div>
+            <div class="progress-track">
+                <div class="progress-fill fill-fatal" style="width:32.1%"></div>
+            </div>
+            <div class="desc">Deaths / Sudden collapse <span style="float:right;color:#fff;">32.1%</span></div>
+        </div>
+        <div class="stat-row">
+            <div class="stat-cat">
+                <div class="cat-name">危殆 CRITICAL</div>
+                <div class="cat-val">4</div>
+            </div>
+            <div class="progress-track">
+                <div class="progress-fill fill-crit" style="width:4.9%"></div>
+            </div>
+            <div class="desc">Unconscious / Life-threatening <span style="float:right;color:#fff;">4.9%</span></div>
+        </div>
+        <div class="stat-row">
+            <div class="stat-cat">
+                <div class="cat-name">意外 ACCIDENT</div>
+                <div class="cat-val">2</div>
+            </div>
+            <div class="progress-track">
+                <div class="progress-fill fill-acc" style="width:2.5%"></div>
+            </div>
+            <div class="desc">Trauma / Traffic / External <span style="float:right;color:#fff;">2.5%</span></div>
+        </div>
+        <div class="stat-row">
+            <div class="stat-cat">
+                <div class="cat-name">其他 OTHER</div>
+                <div class="cat-val">49</div>
+            </div>
+            <div class="progress-track">
+                <div class="progress-fill fill-other" style="width:60.5%"></div>
+            </div>
+            <div class="desc">Unspecified <span style="float:right;color:#fff;">60.5%</span></div>
+        </div></div>
+    </div>
+</main>
+
+<div id="embedded-data" style="display:none;">2026-01-26	https://www.hkcd.com.hk/hkcdweb/content/2026/01/26/content_8737145.html	八鄉致命交通意外 釀一死兩傷
+2026-01-26	https://news.tvb.com/tc/local/6976dbdb82dea93ecb7b87b8/港澳-大埔六旬漢騎單車遭私家車撞斃-司機涉危險駕駛被捕	大埔六旬漢騎單車遭私家車撞斃 司機涉危險駕駛被捕
+2026-01-26	https://www.wenweipo.com/a/202601/26/AP69767d27e4b04d7d56d03ba4.html	的士攔腰挨撞一不治警揭花槽藏刀棍拘兩人- 香港 - 香港文匯網
+2026-01-26	https://news.mingpao.com/ins/港聞/article/20260126/s00001/1769394277863/單車男於大埔汀角路遭私家車撞斃	單車男於大埔汀角路遭私家車撞斃 (10:30) - 20260126 - 港聞
+2026-01-26	https://tw.news.yahoo.com/與運將口角遭丟包-新北男醉臥內車道-遭4車輾斃慘死-062100055.html	與運將口角遭丟包！新北男醉臥內車道 遭4車輾斃慘死
+2026-01-26	https://hkcd.com/hkcdweb/content/2026/01/25/content_8737027.html	錦田交通意外釀1死2傷 私家車司機及女乘客被捕
+2026-01-26	https://www.facebook.com/ETtoday/posts/北市知名酒吧外驚傳命案35歲陸軍少校墜樓亡自殺防治1925生命線1995/1334908975334851/	35歲陸軍少校墜樓亡 ●自殺防治1925生命線1995
+2026-01-26	https://hk.on.cc/hk/bkn/cnt/news/20260126/bkn-20260126031155712-0126_00822_001_cn.html?refer=hn2	土瓜湾12岁男童家中上吊母亲发现惜太迟｜即时新闻｜中港台｜on.cc东网
+2026-01-26	https://hk.on.cc/hk/bkn/cnt/news/20260125/bkn-20260125151428221-0125_00822_001.html	大埔男子危站期間墮樓 昏迷送院救治
+2026-01-26	https://hk.on.cc/hk/bkn/cnt/news/20260125/mobile/bkn-20260125151428221-0125_00822_001_cn.html	大埔情困男危站期间堕楼清醒送院治疗｜即时新闻｜中港台｜on.cc东网
+2026-01-26	https://hk.on.cc/hk/bkn/cnt/news/20260125/bkn-20260125195502062-0125_00822_001_cn.html	屯门六旬妇自缢轻生儿发现救下送院治理｜即时新闻｜中港台｜on.cc东网
+2026-01-26	https://tw.news.yahoo.com/快訊-年前憾事-桃園57歲婦-穿紅衣-豪宅墜樓慘死-012000296.html	快訊／年前憾事！桃園57歲婦「穿紅衣」豪宅墜樓慘死 路人嚇壞報案
+2026-01-26	https://www.msn.com/zh-tw/news/national/快訊-新北女返家聞瓦斯味-警破門1男上吊/ar-AA1S0kR9?cvid=69388fb6c6c741dc920bf8079a015a83&apiversion=v2&domshim=1&noservercache=1&noservertelemetry=1&batchservertelemetry=1&renderwebcomponents=1&wcseo=1	快訊／新北女返家聞瓦斯味 警破門1 男上吊
+2026-01-26	https://www.ohpama.com/1002149/生活熱話/生活熱話/珍惜生命-土瓜灣-12歲-男童-自縊/	珍惜生命｜ 土瓜灣12歲男童寓所內自縊母親揭發惜送院不治| 生活熱話
+2026-01-26	https://www.ohpama.com/1002158/生活熱話/生活熱話/珍惜生命-黃大仙-龍和樓-15歲-少年-墮樓/	珍惜生命｜ 黃大仙下邨龍和樓15歲少年墮樓亡| 生活熱話
+2026-01-26	https://hk.on.cc/hk/bkn/cnt/news/20260125/bkn-20260125185334867-0125_00822_001.html	黃大仙下邨15歲少年墮樓 當場傷重不治
+2026-01-26	https://www.wenweipo.com/s/202601/24/AP69746f13e4b04d7d56d001a9.html	嗜賭欠債男子燒炭亡女友返家揭發- 香港 - 香港文匯網
+2026-01-26	https://tw.news.yahoo.com/新-桃園藝文特區-紅衣女墜樓-慘死-家人睡夢中不知情-030800813.html	新／桃園藝文特區「紅衣女墜樓」慘死 家人睡夢中不知情
+2026-01-26	https://tw.news.yahoo.com/新-陸軍少校疑遭霸凌輕生亡-生前自曝這舉動成-最後-根稻草-035000867.html	新／陸軍少校疑遭霸凌輕生亡 生前自曝這舉動成「最後一根稻草」
+2026-01-26	https://www.nownews.com/news/6779882	新北汐止社區墜樓！深夜突傳巨響 驚見女住戶「25F猛墜地慘死」
+2026-01-26	https://www.am730.com.hk/國際/1006195/印尼土石流增至10死-搜救行動重啟	印尼土石流增至10死 搜救行動重啟
+2026-01-26	https://www.i-cable.com/新聞資訊/432558/美國寒流吹襲廣泛地區-多人失溫亡-華盛頓及23州	美國寒流吹襲廣泛地區 多人失溫亡 華盛頓及23州進入緊急狀態
+2026-01-26	https://www.dotdotnews.com/a/202601/26/AP6976e29be4b0c32d4f67077f.html	（有片）墨西哥一球場發生襲擊事件11人死亡- 國際
+2026-01-26	https://www.epochtimes.com/b5/26/1/26/n14684125.htm/amp	一名航港局警察槍殺親人後自盡
+2026-01-26	https://tw.news.yahoo.com/女模離奇猝死-男友錄嘴塞襪-窗簾綑綁影片-鏡新聞-052049976.html	女模離奇猝死！ 男友錄嘴塞襪、窗簾綑綁影片｜#鏡新聞
+2026-01-26	http://www.msn.com/zh-tw/news/other/北市租屋處離奇命案-26歲女遭-窗簾綑綁-口吐白沫亡-男友送辦/ar-AA1UVrRx?apiversion=v2&domshim=1&noservercache=1&noservertelemetry=1&batchservertelemetry=1&renderwebcomponents=1&wcseo=1	北市租屋處離奇命案! 26歲女遭「窗簾綑綁」 口吐白沫亡男友送辦
+2026-01-26	https://tw.news.yahoo.com/台北女模-窗簾綁手-襪塞嘴亡-傳昏迷時男友在旁拍片-044241935.html	台北女模「窗簾綁手、襪塞嘴亡」 傳昏迷時男友在旁拍片
+2026-01-26	https://tw.news.yahoo.com/男下狠手-割斷女友舌頭-後勒斃-血腥肉塊照曝光-100442476.html	男下狠手「割斷女友舌頭」後勒斃！血腥肉塊照曝光
+2026-01-26	https://hk.on.cc/cnt/news/20260125/bkn-20260125173016676-0125_00822_001.html	旺角鳳姐遭刀匪叉頸打劫 損失1400元現金
+2026-01-26	https://www.wenweipo.com/a/202601/26/AP6976e3cfe4b04d7d56d04a41.html	墨西哥一足球場發生槍擊事件已致11死12傷 - 國際 - 香港文匯網
+2026-01-26	https://tw.news.yahoo.com/45歲-好聲-family-奪冠女歌手癌逝-夫揭比賽時癌擴散全身-000000491.html	45歲《好聲 Family》奪冠女歌手癌逝！夫揭比賽時癌擴散全身 醫：別誤為痔瘡
+2026-01-26	https://stars.udn.com/star/amp/story/10091/9288775	84歲母親加護病房搶救2周離世胡婉玲悲痛證實| 電視
+2026-01-26	https://star.ettoday.net/amp/amp_news.php7?news_id=3107711	女模柯柯29歲癌逝「生前3大遺願」曝光！　歡迎賓客告別式唱歌跳舞
+2026-01-26	https://news.china.com/socialgd/10000169/20260126/49196572.html	中国工程院院士孙燕逝世 肿瘤内科学奠基人辞世
+2026-01-26	https://cj.sina.cn/articles/view/5044281310/12ca99fde02002h3fc?vt=4	中国关工委原常务副主任闵振环逝世，享年94岁
+2026-01-26	https://mtgamer.com/全球資訊/加沙的帳篷生活在疾病和日常絕望之間/258924/	加沙的帳篷生活在疾病和日常絕望之間
+2026-01-26	https://www.msn.com/zh-tw/news/living/台中女童猝逝驗出b19病毒-衛生局-疾管署回應說明/ar-AA1UyMIG?apiversion=v2&domshim=1&noservercache=1&noservertelemetry=1&batchservertelemetry=1&renderwebcomponents=1&wcseo=1	台中女童猝逝驗出B19病毒 衛生局、 疾管署回應說明
+2026-01-26	https://news.tvb.com/tc/world/6976d27e82dea93ecb7b442b/%E5%9C%8B%E9%9A%9B-%E5%B0%BC%E5%B8%95%E7%97%85%E6%AF%92%EF%BD%9C%E5%8D%B0%E5%BA%A6%E7%8F%BE%E6%84%9F%E6%9F%93%E7%BE%A4%E7%B5%84-%E7%84%A1%E7%96%AB%E8%8B%97%E5%8F%AF%E4%BA%BA%E5%82%B3%E4%BA%BA%E6%AD%BB%E4%BA%A1%E7%8E%87%E9%AB%98%E9%81%9475%EF%BD%9C%E5%8D%B3%E7%9D%87%E5%A6%82%E4%BD%95%E9%81%BF%E5%85%8D%E7%97%85%E5%BE%9E%E5%8F%A3%E5%85%A5	尼帕病毒｜印度現感染群組 無疫苗可人傳人死亡率高達75%｜即睇如何避免病從口入
+2026-01-26	https://www.tkww.hk/a/202601/26/AP6976e910e4b0aa6cbcd3bc33.html	印度出現尼帕病毒疫情 感染者死亡率達40%以上
+2026-01-26	https://www.msn.com/zh-tw/news/living/快訊-鑽石公主號船長-船上病逝-副手接手開進基隆港/ar-AA1F2w1K?cvid=02C0692A76E245848473DC0CAA22BFB5&ocid=hpmsn&apiversion=v2&domshim=1&noservercache=1&noservertelemetry=1&batchservertelemetry=1&renderwebcomponents=1&wcseo=1	快訊／鑽石公主號船長「船上病逝！」 副手接手開進基隆港
+2026-01-26	https://life.mingpao.com/general/article?issue=20260126&nodeid=1769364888148	李在明「政治導師」 韓前總理李海瓚猝逝- 20260126 - 公民
+2026-01-26	http://www.sinopecnews.com.cn/xnews/content/2026-01/26/content_7141436.html	闵振环同志逝世
+2026-01-26	http://www.msn.com/zh-tw/entertainment/news/金唱片返韓後-爸爸突離世-tws志薰確定缺席高雄巡演/ar-AA1UJ2Uf?apiversion=v2&domshim=1&noservercache=1&noservertelemetry=1&batchservertelemetry=1&renderwebcomponents=1&wcseo=1	金唱片返韓後「爸爸突離世」! TWS 志薰確定缺席高雄巡演
+2026-01-26	https://www.worldjournal.com/wj/amp/story/121240/9288361	長期糖尿病患者需警惕紅細胞變化損害血管| 養生保健| 健康 | 世界新聞網
+2026-01-26	https://tw.news.yahoo.com/胡婉玲84歲母病逝-深夜慟曝噩耗-愛貓離世前喊-不久會來陪你-000924597.html	胡婉玲84歲母病逝！深夜慟曝噩耗 愛貓離世前喊：不久會來陪你
+2026-01-26	https://tw.news.yahoo.com/面對高度-沉默-的腎臟疾病-醫建議定期規劃檢查-010000605.html	面對高度「沉默」的腎臟疾病 醫建議定期規劃檢查
+2026-01-26	https://tw.news.yahoo.com/消滅-天花-功臣-威廉福奇醫師89歲逝世-013403140.html	消滅「天花」功臣 威廉福奇醫師89歲逝世
+2026-01-26	https://finance.sina.com.cn/tech/roll/2026-01-26/doc-inhircnv9336286.shtml	痛别！孙燕院士逝世
+2026-01-26	https://www.msn.com/zh-tw/entertainment/news/等不到肝臟移植病逝-海俊傑悲痛悼念妻-走得平靜-親友皆陪伴在側/ar-AA1Rs8HI?cvid=692d374c384e44e385f5ab29b3d2da4f	等不到肝臟移植病逝！海俊傑悲痛悼念妻： 走得平靜親友皆陪伴在側
+2026-01-26	https://news.qq.com/rain/a/20260126A0279Q00	著名历史学家、中南财经政法大学原教授袁继成逝世
+2026-01-26	https://www.taisounds.com/news/content/107/238180	辣模柯柯30歲病逝…家屬慟發訃聞遺願也曝光| 影視
+2026-01-26	https://www.ettoday.net/news/20260126/3107563.htm	奮戰血癌3年病逝！26歲女網紅「最後身影曝光」　夫淚崩證實
+2026-01-26	https://tw.news.yahoo.com/獨-大哥猝逝-吳永吉再爆母親去年已離世-092859877.html	獨》大哥猝逝！吳永吉再爆母親去年已離世
+2026-01-26	https://www.msn.com/zh-tw/entertainment/news/獨家-李又汝子宮長肌瘤又多囊性卵巢向神求子見證奇蹟-驗孕2次才信/ar-AA1UEtax?apiversion=v2&domshim=1&noservercache=1&noservertelemetry=1&batchservertelemetry=1&renderwebcomponents=1&wcseo=1	獨家／李又汝子宮長肌瘤又多囊性卵巢!向神求子見證奇蹟 驗孕2 次才信
+2026-01-26	http://www.msn.com/zh-tw/entertainment/news/蕭敬騰岳父逝世-他向愛妻吐-一句話-暖爆-summer-喊話父親放心/ar-AA1StQjJ?cvid=6944e37bc60b4eafb202af4066615fe6&ocid=wispr&apiversion=v2&domshim=1&noservercache=1&noservertelemetry=1&batchservertelemetry=1&renderwebcomponents=1&wcseo=1	蕭敬騰岳父逝世! 他向愛妻吐「一句話」暖爆 Summer 喊話父親放心
+2026-01-26	https://hk.on.cc/hk/bkn/cnt/intnews/20260126/bkn-20260126080022444-0126_00992_001.html	韓前總理李海瓚越南病逝 享年73歲
+2026-01-26	https://www.msn.com/zh-tw/news/other/證交所前總經理朱富春逝世-享壽77歲/ar-AA1UHYh1?apiversion=v2&domshim=1&noservercache=1&noservertelemetry=1&batchservertelemetry=1&renderwebcomponents=1&wcseo=1	證交所前總經理朱富春逝世 享壽77歲
+2026-01-26	https://www.singtao.ca/7398899/2026-01-25/news-30歲女吃自助餐後腹痛離世 體內三酸甘油脂揭超標26倍 醫生揭致命關鍵/	30歲女吃自助餐後腹痛離世 體內三酸甘油脂揭超標26倍 醫生揭致命關鍵
+2026-01-26	https://news.tvb.com/tc/local/6975e58982dea93ecb73c8a9/港澳-40歲男子港島徑行山時不適暈倒送院搶救後不治	40歲男子港島徑行山時不適暈倒 送院搶救後不治
+2026-01-26	https://www.msn.com/zh-tw/news/national/uber女司機新店載客剛到社區-昏倒猝死-警衛嚇壞急報案/ar-AA1UHHlC	Uber女司機新店載客!剛到社區「昏倒猝死」 警衛嚇壞急報案
+2026-01-26	https://www.dotdotnews.com/a/202601/25/AP6975d764e4b0c32d4f66f9c4.html	大圍文禮路教會男子廁內暈倒昏迷送院惜不治- 港聞
+2026-01-26	https://www.singtao.ca/7398713/2026-01-25/news-港島徑行山漢疑與人爭執後暈倒 gfs送院搶救後不治/?variant=zh-hk	中年漢帶子女行港島徑暈倒 送院搶救後不治
+2026-01-26	https://www.hk01.com/大國小事/60316036/內地6旬漢跟團遊北京猝死-旅行社曾連續兩日凌晨集合-判賠35萬	內地6旬漢跟團遊北京猝死 旅行社曾連續兩日凌晨集合 判賠35萬
+2026-01-26	http://www.msn.com/zh-tw/news/other/名醫辦公室猝逝-專家示警惡性心律不整-30秒內失去意識/ar-AA1IXUYj?cvid=25EC4BCEA6074405A7C65060DAA57142&ocid=onepro&apiversion=v2&domshim=1&noservercache=1&noservertelemetry=1&batchservertelemetry=1&renderwebcomponents=1&wcseo=1	名醫辦公室猝逝 專家示警惡性心律不整「30秒內失去意識」
+2026-01-26	https://www.facebook.com/am730hk/photos/死因有待驗屍後確定-大圍-猝死-教會-am730/1369557681878497/	死因有待驗屍後確定 #大圍 #猝死 #教會 #am730
+2026-01-26	https://www.wenweipo.com/a/202601/25/AP6975d7d9e4b04d7d56d02d1e.html	壯漢攜子女港島徑遠足暈倒昏迷直升機送院不治- 香港 - 香港文匯網
+2026-01-26	https://news.now.com/mobile/editorsChoice/player?newsId=634258	男子港島徑行山暈倒昏迷 直升機送院後不治
+2026-01-26	https://www.wenweipo.com/a/202601/25/AP6975bef8e4b04d7d56d02983.html	男子黃大仙踢波昏迷送院救治救回一命- 香港 - 香港文匯網
+2026-01-26	https://www.wenweipo.com/a/202601/26/AP69767d15e4b04d7d56d03ba3.html	食環署督察猝死疑曾胸痛未求醫- 香港 - 香港文匯網
+2026-01-26	https://news.rthk.hk/rthk/ch/component/k2/1841290-20260125.htm	港島徑有行山人士暈倒 送院後不治
+2026-01-26	https://www.msn.com/zh-tw/entertainment/news/熬夜到要吞救心丸-林允片場作息曝光-網怒轟-會猝死吧/ar-AA1UVaYV	熬夜到要吞救心丸! 林允片場作息曝光 網怒轟： 會猝死吧
+2026-01-26	https://www.msn.com/zh-tw/news/other/日82歲翁-喉嚨痛-確診新冠亡-竟是喉嚨卡12cm鑰匙-x光照曝/ar-AA1IooJF?apiversion=v2&noservercache=1&domshim=1&renderwebcomponents=1&wcseo=1&batchservertelemetry=1&noservertelemetry=1	日82歲翁「喉嚨痛」確診新冠亡！竟是喉嚨卡12cm鑰匙 X 光照曝
+2026-01-26	https://news.ttv.com.tw/news/11501250003800W	台東漁船遇浪襲翻覆 船主2小時尋獲送醫不治
+2026-01-26	https://finance.sina.com.cn/roll/2026-01-25/doc-inhiprmp9922672.shtml	四川威远：轿车坠河三人被困 民警与消防员火速驰援化险情
+2026-01-26	https://www.stheadline.com/realtime-world/3538922/死亡旋風美軍直升機著陸-日本女教師遭吹倒不治	死亡旋風︱美軍直升機著陸 日本女教師遭吹倒不治
+2026-01-26	https://www.hk01.com/熱爆話題/60316115/男童將密碼鎖套鼻-竟卡死慘變-牛魔王-消防員靈魂拷問引爆笑	男童將密碼鎖套鼻 竟卡死慘變「牛魔王」 消防員靈魂拷問引爆笑
+2026-01-26	https://std.stheadline.com/realtime-world/3538922/美軍直升機著陸-日本教師遭旋風吹倒死亡	美軍直升機著陸 日本教師遭旋風吹倒死亡
+2026-01-26	https://www.singtao.ca/7399460/2026-01-25/news-粉嶺男工遭機器截斷手指 清醒送院/	粉嶺男工遭機器截斷手指 清醒送院
+2026-01-26	https://www.knews.com.tw/news/005795A081954107FCD16DA49CC4ADCB	驚悚！運將高架橋趕醉客下車 他躺路中央遭4車輾斃
+2026-01-26	https://www.dotdotnews.com/a/202601/26/AP6976b1f5e4b0c32d4f67035b.html	（有片）菲律賓載逾350人渡輪沉沒 至少15死43失蹤
+2026-01-26	https://www.i-cable.com/新聞資訊/432470/菲律賓南部載逾三百人渡輪沉沒-至少13死-多人失	菲律賓南部載逾三百人渡輪沉沒 至少13死、多人失蹤</div>
+
+<!-- 右下角七災年 -->
+<div id="tribulation-overlay">
+    <div class="trib-title">七災年</div>
+    <div class="trib-subtitle">世界痛苦漸增的七年</div>
+    <div class="trib-years">2019 — 2028</div>
+    <a href="https://greattribulaton2028.github.io/-/" target="_blank" class="trib-link">
+        GREAT TRIBULATION<br>COUNTDOWN → click<br>
+    </a>
+    <div class="trib-verse">
+        我又看見死了的人，無論大小，都站在寶座前。案卷展開了，並且另有一卷展開，就是生命冊。死了的人，都憑著這些案卷所記載的，<br>照他們所行的受審判。<br>
+        <span class="verse-emph">啟示錄 20:12</span>
+    </div>
+</div>
+
+<!-- 最下方跑馬燈 footer -->
+<footer id="doom-footer">
+    <div id="footer-text">
+        1.全球大重置 2017 → 2027 → 第四次工業革命 → Great Reset → 電子貨幣化　　　 
+        2.You will Own nothing but you will happy‧→你將一無所有，但你會快樂？　　　 
+        3.商業活動 → 疫苗 → 共濟會的專家 → 共濟會的(商品) → 共濟會的疫苗　　 
+        4.共濟會，說：→Nobody will be safe if not everybody is vaccinated　　 
+        5.(2019 - 2028) &gt; 瘟疫 &gt; 戰爭 &gt; 經濟衰退 &gt; 持續健康惡化 &gt; 2026-2028 更嚴峻的商業活動
+        6.COVID &gt; DNA → mRNA → Nanopatch → Luciferase → 人工晶片→ 人自願地 → 被轉化成GMO → 基因改造生物 → 專利下的商品 → 不再是人，只商品
+        7.COVID → 藉瘟疫中的藥物 → 令人『自願』逐漸變成GMO(獸)的過程 　　　 
+        8.COVID → 第40個禧年 → 末次號筒 → 七年大災難 → End...
+    </div>
+</footer>
+
+<script>
+// 你的原有 script 保持不變（parseData, renderDashboard 等）
+function safeDecode(str) {
+    try { return decodeURIComponent(str.replace(/\+/g, ' ')); } catch(e) { return str; }
+}
+
+function categorize(t) {
+    t = t.toLowerCase();
+    if (/猝死|死亡|不治|斃|溺斃|身亡|暴斃/.test(t)) return 'FATAL';
+    if (/暈倒|昏迷|危殆|不適|心跳停|遇溺|搶救/.test(t)) return 'CRIT';
+    if (/意外|車禍|撞|火警|跌|失控/.test(t)) return 'ACC';
+    return 'OTHER';
+}
+
+function parseData(raw) {
+    const lines = raw.split(/\r?\n/).filter(l => l.trim());
+    const events = [];
+    for (let line of lines) {
+        let text = safeDecode(line);
+        let parts = text.split('\t');
+        if (parts.length < 3) parts = text.split(/\s{2,}/);
+        if (parts.length < 3) continue;
+
+        let dateStr = parts[0].trim().replace(/[\[\]]/g, '');
+        let url = parts.find(p => /^https?:\/\/[^\s\t]/.test(p)) || '#';
+        let title = parts.filter(p => p !== dateStr && p !== url).map(safeDecode).join(' ').trim();
+
+        if (!dateStr || !title) continue;
+
+        let dateParts = dateStr.split(/[\/-]/);
+        if (dateParts.length === 3) {
+            let a = parseInt(dateParts[0], 10);
+            let b = parseInt(dateParts[1], 10);
+            let c = parseInt(dateParts[2], 10);
+            let d, m, y;
+            if (c > 1000) {
+                d = a;
+                m = b;
+                y = c;
+            } else if (a > 1000) {
+                y = a;
+                m = b;
+                d = c;
+            } else {
+                d = a;
+                m = b;
+                y = c;
+            }
+            y = ('' + y).padStart(4, '20');
+            m = ('' + m).padStart(2, '0');
+            d = ('' + d).padStart(2, '0');
+            dateStr = `${y}-${m}-${d}`;
+            const dateObj = new Date(dateStr);
+            if (isNaN(dateObj.getTime())) continue;
+        } else continue;
+
+        events.push({ date: dateStr, url, title, category: categorize(title) });
+    }
+    events.sort((a, b) => new Date(b.date) - new Date(a.date));
+    return events;
+}
+
+let currentEvents = [];
+
+function renderDashboard(events) {
+    currentEvents = events;
+    if (!events.length) return alert('載入失敗，資料為空或格式錯誤');
+
+    const start = events[events.length-1].date;
+    const end = events[0].date;
+    document.getElementById('period-display').textContent = `${start} → ${end}`;
+
+    document.getElementById('total-count').textContent = events.length;
+
+    const stream = document.getElementById('log-stream');
+    const searchInput = document.getElementById('search-input');
+    function renderList(list) {
+        stream.innerHTML = '';
+        list.forEach(e => {
+            const div = document.createElement('div');
+            div.className = `log-item type-${e.category}${e.url !== '#' ? ' has-link' : ''}`;
+            div.innerHTML = `<span class="date">${e.date}</span><span class="title"><a href="${e.url}" target="_blank">${e.title}</a></span>`;
+            stream.appendChild(div);
+        });
+    }
+    renderList(events);
+
+    searchInput.oninput = () => {
+        const q = searchInput.value.toLowerCase().trim();
+        const filtered = events.filter(e => e.title.toLowerCase().includes(q) || e.date.includes(q));
+        renderList(filtered);
+    };
+
+    const stats = {FATAL:0, CRIT:0, ACC:0, OTHER:0};
+    events.forEach(e => stats[e.category]++);
+    const total = events.length;
+    const container = document.getElementById('stats-container');
+    container.innerHTML = '';
+    ['FATAL','CRIT','ACC','OTHER'].forEach(key => {
+        const count = stats[key];
+        const pct = total ? (count / total * 100).toFixed(1) : 0;
+        const label = key==='FATAL'?'猝死 Sudden Death':key==='CRIT'?'危殆 CRITICAL':key==='ACC'?'意外 ACCIDENT':'其他 OTHER';
+        const desc = key==='FATAL'?'Deaths / Sudden collapse':key==='CRIT'?'Unconscious / Life-threatening':key==='ACC'?'Trauma / Traffic / External':'Unspecified';
+        container.innerHTML += `
+        <div class="stat-row">
+            <div class="stat-cat">
+                <div class="cat-name">${label}</div>
+                <div class="cat-val">${count}</div>
+            </div>
+            <div class="progress-track">
+                <div class="progress-fill fill-${key.toLowerCase()}" style="width:${pct}%"></div>
+            </div>
+            <div class="desc">${desc} <span style="float:right;color:#fff;">${pct}%</span></div>
+        </div>`;
+    });
+
+    // ===== Category distribution chart (百分比) =====
+    // stats 已經喺上面算好：const stats = {FATAL:0, CRIT:0, ACC:0, OTHER:0}; events.forEach(e => stats[e.category]++);
+    const keys   = ['FATAL', 'CRIT', 'ACC', 'OTHER'];
+    const labels = { FATAL:'FATAL', CRIT:'CRITICAL', ACC:'ACCIDENT', OTHER:'OTHER' };
+    const colors = {
+        FATAL: 'var(--c-fatal)',
+        CRIT:  'var(--c-crit)',
+        ACC:   'var(--c-acc)',
+        OTHER: 'var(--c-dim)'
+    };
+
+    const total2 = events.length || 1;                 // 用 events 長度，避免除 0
+    const pctArr = keys.map(k => (stats[k] || 0) / total2 * 100);
+    const maxPct = Math.max(...pctArr, 1);             // 正常 max 會 ≤100，但保底
+
+    const barContainer = document.getElementById('bar-container');
+    barContainer.innerHTML = '';
+    barContainer.classList.add('category-mode');   // 開啟類別版面
+
+    keys.forEach((k, i) => {
+        const pct = pctArr[i];
+        const count = stats[k] || 0;
+
+        const col = document.createElement('div');
+        col.className = 'cat-col';
+
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.style.background = colors[k];
+        bar.style.height = (pct / maxPct * 100) + '%';
+        bar.title = `${labels[k]}: ${count} (${pct.toFixed(1)}%)`;
+
+        const label = document.createElement('div');
+        label.className = 'cat-label';
+        label.innerHTML = `<b>${labels[k]}</b><br>${count} / ${pct.toFixed(1)}%`;
+
+        col.appendChild(bar);
+        col.appendChild(label);
+        barContainer.appendChild(col);
+    });
+
+    // 類別圖唔畫累積折線：清空 polyline
+    document.getElementById('trend-line').setAttribute('points', '');
+
+
+}
+
+function loadPastedData() {
+    const text = document.getElementById('paste-input').value;
+    if (!text.trim()) return alert('請先貼上資料');
+    const events = parseData(text);
+    renderDashboard(events);
+}
+
+function handleFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+        document.getElementById('paste-input').value = ev.target.result;
+        loadPastedData();
+    };
+    reader.readAsText(file);
+}
+
+function exportSnapshot() {
+    if (currentEvents.length === 0) return alert('請先載入資料');
+    let html = document.documentElement.outerHTML;
+    const data = currentEvents.map(e => `${e.date}\t${e.url}\t${e.title.replace(/\t/g, ' ')}`).join('\n');
+    const safe = data.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    html = html.replace(/2026-01-26	https://www.hkcd.com.hk/hkcdweb/content/2026/01/26/content_8737145.html	八鄉致命交通意外 釀一死兩傷
+2026-01-26	https://news.tvb.com/tc/local/6976dbdb82dea93ecb7b87b8/港澳-大埔六旬漢騎單車遭私家車撞斃-司機涉危險駕駛被捕	大埔六旬漢騎單車遭私家車撞斃 司機涉危險駕駛被捕
+2026-01-26	https://www.wenweipo.com/a/202601/26/AP69767d27e4b04d7d56d03ba4.html	的士攔腰挨撞一不治警揭花槽藏刀棍拘兩人- 香港 - 香港文匯網
+2026-01-26	https://news.mingpao.com/ins/港聞/article/20260126/s00001/1769394277863/單車男於大埔汀角路遭私家車撞斃	單車男於大埔汀角路遭私家車撞斃 (10:30) - 20260126 - 港聞
+2026-01-26	https://tw.news.yahoo.com/與運將口角遭丟包-新北男醉臥內車道-遭4車輾斃慘死-062100055.html	與運將口角遭丟包！新北男醉臥內車道 遭4車輾斃慘死
+2026-01-26	https://hkcd.com/hkcdweb/content/2026/01/25/content_8737027.html	錦田交通意外釀1死2傷 私家車司機及女乘客被捕
+2026-01-26	https://www.facebook.com/ETtoday/posts/北市知名酒吧外驚傳命案35歲陸軍少校墜樓亡自殺防治1925生命線1995/1334908975334851/	35歲陸軍少校墜樓亡 ●自殺防治1925生命線1995
+2026-01-26	https://hk.on.cc/hk/bkn/cnt/news/20260126/bkn-20260126031155712-0126_00822_001_cn.html?refer=hn2	土瓜湾12岁男童家中上吊母亲发现惜太迟｜即时新闻｜中港台｜on.cc东网
+2026-01-26	https://hk.on.cc/hk/bkn/cnt/news/20260125/bkn-20260125151428221-0125_00822_001.html	大埔男子危站期間墮樓 昏迷送院救治
+2026-01-26	https://hk.on.cc/hk/bkn/cnt/news/20260125/mobile/bkn-20260125151428221-0125_00822_001_cn.html	大埔情困男危站期间堕楼清醒送院治疗｜即时新闻｜中港台｜on.cc东网
+2026-01-26	https://hk.on.cc/hk/bkn/cnt/news/20260125/bkn-20260125195502062-0125_00822_001_cn.html	屯门六旬妇自缢轻生儿发现救下送院治理｜即时新闻｜中港台｜on.cc东网
+2026-01-26	https://tw.news.yahoo.com/快訊-年前憾事-桃園57歲婦-穿紅衣-豪宅墜樓慘死-012000296.html	快訊／年前憾事！桃園57歲婦「穿紅衣」豪宅墜樓慘死 路人嚇壞報案
+2026-01-26	https://www.msn.com/zh-tw/news/national/快訊-新北女返家聞瓦斯味-警破門1男上吊/ar-AA1S0kR9?cvid=69388fb6c6c741dc920bf8079a015a83&apiversion=v2&domshim=1&noservercache=1&noservertelemetry=1&batchservertelemetry=1&renderwebcomponents=1&wcseo=1	快訊／新北女返家聞瓦斯味 警破門1 男上吊
+2026-01-26	https://www.ohpama.com/1002149/生活熱話/生活熱話/珍惜生命-土瓜灣-12歲-男童-自縊/	珍惜生命｜ 土瓜灣12歲男童寓所內自縊母親揭發惜送院不治| 生活熱話
+2026-01-26	https://www.ohpama.com/1002158/生活熱話/生活熱話/珍惜生命-黃大仙-龍和樓-15歲-少年-墮樓/	珍惜生命｜ 黃大仙下邨龍和樓15歲少年墮樓亡| 生活熱話
+2026-01-26	https://hk.on.cc/hk/bkn/cnt/news/20260125/bkn-20260125185334867-0125_00822_001.html	黃大仙下邨15歲少年墮樓 當場傷重不治
+2026-01-26	https://www.wenweipo.com/s/202601/24/AP69746f13e4b04d7d56d001a9.html	嗜賭欠債男子燒炭亡女友返家揭發- 香港 - 香港文匯網
+2026-01-26	https://tw.news.yahoo.com/新-桃園藝文特區-紅衣女墜樓-慘死-家人睡夢中不知情-030800813.html	新／桃園藝文特區「紅衣女墜樓」慘死 家人睡夢中不知情
+2026-01-26	https://tw.news.yahoo.com/新-陸軍少校疑遭霸凌輕生亡-生前自曝這舉動成-最後-根稻草-035000867.html	新／陸軍少校疑遭霸凌輕生亡 生前自曝這舉動成「最後一根稻草」
+2026-01-26	https://www.nownews.com/news/6779882	新北汐止社區墜樓！深夜突傳巨響 驚見女住戶「25F猛墜地慘死」
+2026-01-26	https://www.am730.com.hk/國際/1006195/印尼土石流增至10死-搜救行動重啟	印尼土石流增至10死 搜救行動重啟
+2026-01-26	https://www.i-cable.com/新聞資訊/432558/美國寒流吹襲廣泛地區-多人失溫亡-華盛頓及23州	美國寒流吹襲廣泛地區 多人失溫亡 華盛頓及23州進入緊急狀態
+2026-01-26	https://www.dotdotnews.com/a/202601/26/AP6976e29be4b0c32d4f67077f.html	（有片）墨西哥一球場發生襲擊事件11人死亡- 國際
+2026-01-26	https://www.epochtimes.com/b5/26/1/26/n14684125.htm/amp	一名航港局警察槍殺親人後自盡
+2026-01-26	https://tw.news.yahoo.com/女模離奇猝死-男友錄嘴塞襪-窗簾綑綁影片-鏡新聞-052049976.html	女模離奇猝死！ 男友錄嘴塞襪、窗簾綑綁影片｜#鏡新聞
+2026-01-26	http://www.msn.com/zh-tw/news/other/北市租屋處離奇命案-26歲女遭-窗簾綑綁-口吐白沫亡-男友送辦/ar-AA1UVrRx?apiversion=v2&domshim=1&noservercache=1&noservertelemetry=1&batchservertelemetry=1&renderwebcomponents=1&wcseo=1	北市租屋處離奇命案! 26歲女遭「窗簾綑綁」 口吐白沫亡男友送辦
+2026-01-26	https://tw.news.yahoo.com/台北女模-窗簾綁手-襪塞嘴亡-傳昏迷時男友在旁拍片-044241935.html	台北女模「窗簾綁手、襪塞嘴亡」 傳昏迷時男友在旁拍片
+2026-01-26	https://tw.news.yahoo.com/男下狠手-割斷女友舌頭-後勒斃-血腥肉塊照曝光-100442476.html	男下狠手「割斷女友舌頭」後勒斃！血腥肉塊照曝光
+2026-01-26	https://hk.on.cc/cnt/news/20260125/bkn-20260125173016676-0125_00822_001.html	旺角鳳姐遭刀匪叉頸打劫 損失1400元現金
+2026-01-26	https://www.wenweipo.com/a/202601/26/AP6976e3cfe4b04d7d56d04a41.html	墨西哥一足球場發生槍擊事件已致11死12傷 - 國際 - 香港文匯網
+2026-01-26	https://tw.news.yahoo.com/45歲-好聲-family-奪冠女歌手癌逝-夫揭比賽時癌擴散全身-000000491.html	45歲《好聲 Family》奪冠女歌手癌逝！夫揭比賽時癌擴散全身 醫：別誤為痔瘡
+2026-01-26	https://stars.udn.com/star/amp/story/10091/9288775	84歲母親加護病房搶救2周離世胡婉玲悲痛證實| 電視
+2026-01-26	https://star.ettoday.net/amp/amp_news.php7?news_id=3107711	女模柯柯29歲癌逝「生前3大遺願」曝光！　歡迎賓客告別式唱歌跳舞
+2026-01-26	https://news.china.com/socialgd/10000169/20260126/49196572.html	中国工程院院士孙燕逝世 肿瘤内科学奠基人辞世
+2026-01-26	https://cj.sina.cn/articles/view/5044281310/12ca99fde02002h3fc?vt=4	中国关工委原常务副主任闵振环逝世，享年94岁
+2026-01-26	https://mtgamer.com/全球資訊/加沙的帳篷生活在疾病和日常絕望之間/258924/	加沙的帳篷生活在疾病和日常絕望之間
+2026-01-26	https://www.msn.com/zh-tw/news/living/台中女童猝逝驗出b19病毒-衛生局-疾管署回應說明/ar-AA1UyMIG?apiversion=v2&domshim=1&noservercache=1&noservertelemetry=1&batchservertelemetry=1&renderwebcomponents=1&wcseo=1	台中女童猝逝驗出B19病毒 衛生局、 疾管署回應說明
+2026-01-26	https://news.tvb.com/tc/world/6976d27e82dea93ecb7b442b/%E5%9C%8B%E9%9A%9B-%E5%B0%BC%E5%B8%95%E7%97%85%E6%AF%92%EF%BD%9C%E5%8D%B0%E5%BA%A6%E7%8F%BE%E6%84%9F%E6%9F%93%E7%BE%A4%E7%B5%84-%E7%84%A1%E7%96%AB%E8%8B%97%E5%8F%AF%E4%BA%BA%E5%82%B3%E4%BA%BA%E6%AD%BB%E4%BA%A1%E7%8E%87%E9%AB%98%E9%81%9475%EF%BD%9C%E5%8D%B3%E7%9D%87%E5%A6%82%E4%BD%95%E9%81%BF%E5%85%8D%E7%97%85%E5%BE%9E%E5%8F%A3%E5%85%A5	尼帕病毒｜印度現感染群組 無疫苗可人傳人死亡率高達75%｜即睇如何避免病從口入
+2026-01-26	https://www.tkww.hk/a/202601/26/AP6976e910e4b0aa6cbcd3bc33.html	印度出現尼帕病毒疫情 感染者死亡率達40%以上
+2026-01-26	https://www.msn.com/zh-tw/news/living/快訊-鑽石公主號船長-船上病逝-副手接手開進基隆港/ar-AA1F2w1K?cvid=02C0692A76E245848473DC0CAA22BFB5&ocid=hpmsn&apiversion=v2&domshim=1&noservercache=1&noservertelemetry=1&batchservertelemetry=1&renderwebcomponents=1&wcseo=1	快訊／鑽石公主號船長「船上病逝！」 副手接手開進基隆港
+2026-01-26	https://life.mingpao.com/general/article?issue=20260126&nodeid=1769364888148	李在明「政治導師」 韓前總理李海瓚猝逝- 20260126 - 公民
+2026-01-26	http://www.sinopecnews.com.cn/xnews/content/2026-01/26/content_7141436.html	闵振环同志逝世
+2026-01-26	http://www.msn.com/zh-tw/entertainment/news/金唱片返韓後-爸爸突離世-tws志薰確定缺席高雄巡演/ar-AA1UJ2Uf?apiversion=v2&domshim=1&noservercache=1&noservertelemetry=1&batchservertelemetry=1&renderwebcomponents=1&wcseo=1	金唱片返韓後「爸爸突離世」! TWS 志薰確定缺席高雄巡演
+2026-01-26	https://www.worldjournal.com/wj/amp/story/121240/9288361	長期糖尿病患者需警惕紅細胞變化損害血管| 養生保健| 健康 | 世界新聞網
+2026-01-26	https://tw.news.yahoo.com/胡婉玲84歲母病逝-深夜慟曝噩耗-愛貓離世前喊-不久會來陪你-000924597.html	胡婉玲84歲母病逝！深夜慟曝噩耗 愛貓離世前喊：不久會來陪你
+2026-01-26	https://tw.news.yahoo.com/面對高度-沉默-的腎臟疾病-醫建議定期規劃檢查-010000605.html	面對高度「沉默」的腎臟疾病 醫建議定期規劃檢查
+2026-01-26	https://tw.news.yahoo.com/消滅-天花-功臣-威廉福奇醫師89歲逝世-013403140.html	消滅「天花」功臣 威廉福奇醫師89歲逝世
+2026-01-26	https://finance.sina.com.cn/tech/roll/2026-01-26/doc-inhircnv9336286.shtml	痛别！孙燕院士逝世
+2026-01-26	https://www.msn.com/zh-tw/entertainment/news/等不到肝臟移植病逝-海俊傑悲痛悼念妻-走得平靜-親友皆陪伴在側/ar-AA1Rs8HI?cvid=692d374c384e44e385f5ab29b3d2da4f	等不到肝臟移植病逝！海俊傑悲痛悼念妻： 走得平靜親友皆陪伴在側
+2026-01-26	https://news.qq.com/rain/a/20260126A0279Q00	著名历史学家、中南财经政法大学原教授袁继成逝世
+2026-01-26	https://www.taisounds.com/news/content/107/238180	辣模柯柯30歲病逝…家屬慟發訃聞遺願也曝光| 影視
+2026-01-26	https://www.ettoday.net/news/20260126/3107563.htm	奮戰血癌3年病逝！26歲女網紅「最後身影曝光」　夫淚崩證實
+2026-01-26	https://tw.news.yahoo.com/獨-大哥猝逝-吳永吉再爆母親去年已離世-092859877.html	獨》大哥猝逝！吳永吉再爆母親去年已離世
+2026-01-26	https://www.msn.com/zh-tw/entertainment/news/獨家-李又汝子宮長肌瘤又多囊性卵巢向神求子見證奇蹟-驗孕2次才信/ar-AA1UEtax?apiversion=v2&domshim=1&noservercache=1&noservertelemetry=1&batchservertelemetry=1&renderwebcomponents=1&wcseo=1	獨家／李又汝子宮長肌瘤又多囊性卵巢!向神求子見證奇蹟 驗孕2 次才信
+2026-01-26	http://www.msn.com/zh-tw/entertainment/news/蕭敬騰岳父逝世-他向愛妻吐-一句話-暖爆-summer-喊話父親放心/ar-AA1StQjJ?cvid=6944e37bc60b4eafb202af4066615fe6&ocid=wispr&apiversion=v2&domshim=1&noservercache=1&noservertelemetry=1&batchservertelemetry=1&renderwebcomponents=1&wcseo=1	蕭敬騰岳父逝世! 他向愛妻吐「一句話」暖爆 Summer 喊話父親放心
+2026-01-26	https://hk.on.cc/hk/bkn/cnt/intnews/20260126/bkn-20260126080022444-0126_00992_001.html	韓前總理李海瓚越南病逝 享年73歲
+2026-01-26	https://www.msn.com/zh-tw/news/other/證交所前總經理朱富春逝世-享壽77歲/ar-AA1UHYh1?apiversion=v2&domshim=1&noservercache=1&noservertelemetry=1&batchservertelemetry=1&renderwebcomponents=1&wcseo=1	證交所前總經理朱富春逝世 享壽77歲
+2026-01-26	https://www.singtao.ca/7398899/2026-01-25/news-30歲女吃自助餐後腹痛離世 體內三酸甘油脂揭超標26倍 醫生揭致命關鍵/	30歲女吃自助餐後腹痛離世 體內三酸甘油脂揭超標26倍 醫生揭致命關鍵
+2026-01-26	https://news.tvb.com/tc/local/6975e58982dea93ecb73c8a9/港澳-40歲男子港島徑行山時不適暈倒送院搶救後不治	40歲男子港島徑行山時不適暈倒 送院搶救後不治
+2026-01-26	https://www.msn.com/zh-tw/news/national/uber女司機新店載客剛到社區-昏倒猝死-警衛嚇壞急報案/ar-AA1UHHlC	Uber女司機新店載客!剛到社區「昏倒猝死」 警衛嚇壞急報案
+2026-01-26	https://www.dotdotnews.com/a/202601/25/AP6975d764e4b0c32d4f66f9c4.html	大圍文禮路教會男子廁內暈倒昏迷送院惜不治- 港聞
+2026-01-26	https://www.singtao.ca/7398713/2026-01-25/news-港島徑行山漢疑與人爭執後暈倒 gfs送院搶救後不治/?variant=zh-hk	中年漢帶子女行港島徑暈倒 送院搶救後不治
+2026-01-26	https://www.hk01.com/大國小事/60316036/內地6旬漢跟團遊北京猝死-旅行社曾連續兩日凌晨集合-判賠35萬	內地6旬漢跟團遊北京猝死 旅行社曾連續兩日凌晨集合 判賠35萬
+2026-01-26	http://www.msn.com/zh-tw/news/other/名醫辦公室猝逝-專家示警惡性心律不整-30秒內失去意識/ar-AA1IXUYj?cvid=25EC4BCEA6074405A7C65060DAA57142&ocid=onepro&apiversion=v2&domshim=1&noservercache=1&noservertelemetry=1&batchservertelemetry=1&renderwebcomponents=1&wcseo=1	名醫辦公室猝逝 專家示警惡性心律不整「30秒內失去意識」
+2026-01-26	https://www.facebook.com/am730hk/photos/死因有待驗屍後確定-大圍-猝死-教會-am730/1369557681878497/	死因有待驗屍後確定 #大圍 #猝死 #教會 #am730
+2026-01-26	https://www.wenweipo.com/a/202601/25/AP6975d7d9e4b04d7d56d02d1e.html	壯漢攜子女港島徑遠足暈倒昏迷直升機送院不治- 香港 - 香港文匯網
+2026-01-26	https://news.now.com/mobile/editorsChoice/player?newsId=634258	男子港島徑行山暈倒昏迷 直升機送院後不治
+2026-01-26	https://www.wenweipo.com/a/202601/25/AP6975bef8e4b04d7d56d02983.html	男子黃大仙踢波昏迷送院救治救回一命- 香港 - 香港文匯網
+2026-01-26	https://www.wenweipo.com/a/202601/26/AP69767d15e4b04d7d56d03ba3.html	食環署督察猝死疑曾胸痛未求醫- 香港 - 香港文匯網
+2026-01-26	https://news.rthk.hk/rthk/ch/component/k2/1841290-20260125.htm	港島徑有行山人士暈倒 送院後不治
+2026-01-26	https://www.msn.com/zh-tw/entertainment/news/熬夜到要吞救心丸-林允片場作息曝光-網怒轟-會猝死吧/ar-AA1UVaYV	熬夜到要吞救心丸! 林允片場作息曝光 網怒轟： 會猝死吧
+2026-01-26	https://www.msn.com/zh-tw/news/other/日82歲翁-喉嚨痛-確診新冠亡-竟是喉嚨卡12cm鑰匙-x光照曝/ar-AA1IooJF?apiversion=v2&noservercache=1&domshim=1&renderwebcomponents=1&wcseo=1&batchservertelemetry=1&noservertelemetry=1	日82歲翁「喉嚨痛」確診新冠亡！竟是喉嚨卡12cm鑰匙 X 光照曝
+2026-01-26	https://news.ttv.com.tw/news/11501250003800W	台東漁船遇浪襲翻覆 船主2小時尋獲送醫不治
+2026-01-26	https://finance.sina.com.cn/roll/2026-01-25/doc-inhiprmp9922672.shtml	四川威远：轿车坠河三人被困 民警与消防员火速驰援化险情
+2026-01-26	https://www.stheadline.com/realtime-world/3538922/死亡旋風美軍直升機著陸-日本女教師遭吹倒不治	死亡旋風︱美軍直升機著陸 日本女教師遭吹倒不治
+2026-01-26	https://www.hk01.com/熱爆話題/60316115/男童將密碼鎖套鼻-竟卡死慘變-牛魔王-消防員靈魂拷問引爆笑	男童將密碼鎖套鼻 竟卡死慘變「牛魔王」 消防員靈魂拷問引爆笑
+2026-01-26	https://std.stheadline.com/realtime-world/3538922/美軍直升機著陸-日本教師遭旋風吹倒死亡	美軍直升機著陸 日本教師遭旋風吹倒死亡
+2026-01-26	https://www.singtao.ca/7399460/2026-01-25/news-粉嶺男工遭機器截斷手指 清醒送院/	粉嶺男工遭機器截斷手指 清醒送院
+2026-01-26	https://www.knews.com.tw/news/005795A081954107FCD16DA49CC4ADCB	驚悚！運將高架橋趕醉客下車 他躺路中央遭4車輾斃
+2026-01-26	https://www.dotdotnews.com/a/202601/26/AP6976b1f5e4b0c32d4f67035b.html	（有片）菲律賓載逾350人渡輪沉沒 至少15死43失蹤
+2026-01-26	https://www.i-cable.com/新聞資訊/432470/菲律賓南部載逾三百人渡輪沉沒-至少13死-多人失	菲律賓南部載逾三百人渡輪沉沒 至少13死、多人失蹤/g, safe);
+    const blob = new Blob([html], {type: 'text/html;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Vital_Threat_Monitor_${new Date().toISOString().slice(0,10)}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// 倒數計時邏輯（保持不變）
+const targetDate = new Date('2027-10-01T00:00:00+08:00');
+const countdownBox = document.getElementById('doomsday-countdown');
+const timerDisplay = document.getElementById('countdown-timer');
+
+function updateDoomsday() {
+    const diff = targetDate - new Date();
+    if (diff <= 0) {
+        timerDisplay.textContent = 'COLLAPSE INITIATED';
+        countdownBox.classList.add('countdown-urgent');
+        return;
+    }
+    const days = Math.floor(diff / 86400000);
+    const hours = Math.floor((diff % 86400000) / 3600000);
+    const mins = Math.floor((diff % 3600000) / 60000);
+    timerDisplay.textContent = `${days}d ${hours.toString().padStart(2,'0')}h ${mins.toString().padStart(2,'0')}m`;
+    if (days < 30) {
+        countdownBox.classList.add('countdown-urgent');
+    } else {
+        countdownBox.classList.remove('countdown-urgent');
+    }
+}
+updateDoomsday();
+setInterval(updateDoomsday, 1000);
+
+// 其他 onload 邏輯保持
+window.onload = () => {
+    const embedded = document.getElementById('embedded-data');
+    if (embedded && embedded.textContent.trim()) {
+        document.getElementById('paste-input').value = embedded.textContent;
+        loadPastedData();
+    }
+};
+</script>
+
+</body></html>
